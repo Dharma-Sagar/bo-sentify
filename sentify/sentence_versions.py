@@ -52,7 +52,8 @@ def get_chunk_idx(row):
     return chunk_idx
 
 
-def process_chunks(sheets):
+def process_chunks(sheets, lang):
+    sep = '' if lang == 'bo' else ' '
     total_chunks = dict()
     for name, v in sheets.items():
         meta, rows = v
@@ -62,7 +63,7 @@ def process_chunks(sheets):
         for a, b in idx:
             # generate all versions
             chunk_versions = [r[a:b+1] for r in rows]
-            chunk_versions = [''.join([c for c in chunk if c]) for chunk in chunk_versions]
+            chunk_versions = [sep.join([c for c in chunk if c]) for chunk in chunk_versions]
             # remove duplicates
             chunk_versions = list(set([c for c in chunk_versions if c]))
 
@@ -141,7 +142,7 @@ def sort_sents(sents):
     return by_size, orig
 
 
-def gen_alt_sentences(in_file, out_file, format='xlsx'):
+def generate_alternative_sentences(in_file, out_file, lang, format='xlsx'):
     """
 
     :param in_file: xlsx file, one sentence per sheet.
@@ -150,12 +151,15 @@ def gen_alt_sentences(in_file, out_file, format='xlsx'):
     :param out_file: docx file
     """
     sheets = parse_sheets(in_file)
-    chunks = process_chunks(sheets)
+    chunks = process_chunks(sheets, lang=lang)
 
     sentences = dict()
     for name, parts in chunks.items():
         sents = get_sentences_after(parts, 1)
         sents = [re.sub(r'\s+', ' ', s) for s in sents]  # single spaces
+        if lang != 'bo':
+            sents = [re.sub(r' [,.;]', '\1', s) for s in sents]
+            sents = [s.replace(' - ', '-') for s in sents]
         sents = sort_sents(sents)
         sentences[name] = sents
     if format == 'docx':
@@ -166,13 +170,46 @@ def gen_alt_sentences(in_file, out_file, format='xlsx'):
         raise NotImplementedError('permitted formats: xlsx and docx')
 
 
-def generate_sentence_versions(in_path, out_path):
-    if not out_path.is_dir():
-        out_path.mkdir()
+def extract_versions(in_file):
+    wb = load_workbook(in_file)
+    versions = {}
+    for sheet in wb.worksheets:
+        for i, row in enumerate(sheet):
+            values = [r.value for r in row]
+            version = values[0] if i != 0 else None
+            if version != None:
+                version = str(version)
+                for v in version.split(' '):
+                    if v not in versions:
+                        versions[v] = []
+                    sent = values[3].strip()
+                    versions[v].append(sent)
+    return versions
 
-    for f in in_path.glob('*.xlsx'):
-        out_file = out_path / (f.stem.split('_')[0] + '_sents.xlsx')
-        if out_file.is_file():
-            print('passing: ', str(f), 'is already processed.')
-            continue
-        gen_alt_sentences(f, out_file)
+
+def format_bo(versions):
+    for v, sents in versions.items():
+        formatted = []
+        for sent in sents:
+            sent = sent.replace('་-', '')
+            sent = sent.replace(' ', '')
+            sent = sent.strip('་')
+            sent = sent.replace('_', ' ')
+            sent = re.sub(r'([གདནབམའརལསིེོུ])་(།)', r'\1\2', sent)
+            if not sent.endswith('།') and not sent.endswith('ག'):
+                sent += '།'
+            formatted.append(sent)
+        versions[v] = formatted
+    return versions
+
+
+def generate_versions(in_file, out_file, lang='bo'):
+    versions = extract_versions(in_file)
+    if lang == 'bo':
+        versions = format_bo(versions)
+
+    doc = docx.Document()
+    for ver_name, sents in versions.items():
+        doc.add_heading(str(ver_name), level=1)
+        doc.add_paragraph(' '.join(sents))
+    doc.save(out_file)

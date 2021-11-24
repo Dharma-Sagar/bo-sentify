@@ -2,76 +2,93 @@ from pathlib import Path
 import re
 
 from botok import WordTokenizer, Config
-import yaml
+from spacy.lang.en import English
+from spacy.lang.pt import Portuguese
 
 
-def set_tok():
-    c = Config(dialect_name='general', base_path=Path('../output/tok_data'))
-    return WordTokenizer(config=c)
+class Tokenizer:
+    def __init__(self, lang='bo'):
+        self.set_tok = None
+        self.tokenize = None
+        self.set_lang(lang)
+
+    def set_lang(self, lang):
+        if lang == 'bo':
+            self.set_tok = set_tok_bo
+            self.tokenize = tokenize_bo
+        if lang == 'en':
+            self.set_tok = set_tok_en
+            self.tokenize = tokenize_en
+
+    def tok_file(self, tok, in_file, out_file):
+        dump = in_file.read_text()
+        out = self.tokenize(tok, dump)
+        out_file.write_text(out)
 
 
-def tokenize(tok, string):
+def set_tok_en():
+    nlp = English()
+    nlp.add_pipe('sentencizer')
+    return nlp
+
+
+def tokenize_en(tok, string):
+    sents = []
+    for sent in tok(string).sents:
+        tokens = [str(s).replace(' ', '_') for s in sent]
+        sents.append(' '.join(tokens))
+    return '\n'.join(sents)
+
+
+def set_tok_bo():
+    c = Config(dialect_name='general', base_path=Path('../content/tok_data'))
+    return WordTokenizer(config=c, )
+
+
+def tokenize_bo(tok, string):
     lemmatization_exceptions = ['བཅས་', 'མཁས་']
-    tokens = tok.tokenize(string)
-    words = []
-    for t in tokens:
-        if t.chunk_type == 'TEXT':
-            if not t.lemma:
-                text = t.text
-            else:
-                if t.pos == 'PART':
-                    if t.affix:
-                        text = '-' + t.text
-                    else:
-                        text = t.text
+    lines = []
+    for line in string.split('\n'):
+        tokens = tok.tokenize(line)
+        words = []
+        for t in tokens:
+            if t.chunk_type == 'TEXT':
+                if not t.lemma:
+                    text = t.text
                 else:
-                    # Hack because of botok limitation:
-                    if t.text_cleaned not in lemmatization_exceptions and t.affixation and 'aa' in t.affixation and t.affixation['aa']:
-                        text = t.lemma
+                    if t.pos == 'PART':
+                        if t.affix:
+                            text = '-' + t.text
+                        else:
+                            text = t.text
                     else:
-                        text = t.text
-            text = text.strip().replace('༌', '་')
-            if not text.endswith('་'):
-                text += '་'
+                        # Hack because of botok limitation:
+                        if t.text_cleaned not in lemmatization_exceptions and t.affixation and 'aa' in t.affixation and t.affixation['aa']:
+                            text = t.lemma
+                        else:
+                            text = t.text
+                text = text.strip().replace('༌', '་')
+                if not text.endswith('་'):
+                    text += '་'
 
-            if t.pos == 'NON_WORD':
-                text += '#'
-            words.append(text)
+                if t.pos == 'NON_WORD':
+                    text += '#'
+                words.append(text)
 
-        else:
-            t = t.text.replace(' ', '_')
-            words.append(t)
+            else:
+                t = t.text.replace(' ', '_')
+                words.append(t)
 
-    tokenized = ' '.join(words)
+        tokenized = ' '.join(words)
 
-    # do replacements
-    repl_path = Path('../output/tok_data') / 'general' / 'adjustments' / 'rules' / 'replacements.txt'
-    if not repl_path.is_file():
-        repl_path.write_text('')
-    for line in repl_path.read_text().split('\n'):
-        if '—' in line:
-            orig, repl = line.split('—')
-            tokenized = tokenized.replace(orig, repl)
+        # do replacements
+        repl_path = Path('../content/tok_data') / 'general' / 'adjustments' / 'rules' / 'replacements.txt'
+        if not repl_path.is_file():
+            repl_path.write_text('')
+        for line in repl_path.read_text().split('\n'):
+            if '—' in line:
+                orig, repl = line.split('—')
+                tokenized = tokenized.replace(orig, repl)
+        lines.append(tokenized)
 
-    return tokenized
-
-
-def tok_file(tok, in_file, out_file):
-    dump = in_file.read_text()
-    out = []
-    for line in dump.split('\n'):
-        out.append(tokenize(tok, line))
-    out_file.write_text('\n'.join(out))
-
-
-def tok_corpus(in_path, out_path):
-    if not out_path.is_dir():
-        out_path.mkdir()
-    tok = set_tok()
-    for f in in_path.glob('*.txt'):
-        out_file = out_path / (f.stem + '_segmented.txt')
-        if out_file.is_file():
-            print('passing: ', str(f), 'is already processed.')
-            continue
-        print(f)
-        tok_file(tok, f, out_file)
+    return '\n'.join(lines)
