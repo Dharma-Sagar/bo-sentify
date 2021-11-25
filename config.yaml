@@ -1,5 +1,5 @@
 # "local", "drive" or "upload"
-mode: upload
+mode: local
 # "bo" and "en" are currently supported
 lang: bo
 # the relative path to the folder containing the 5 folders of the data
