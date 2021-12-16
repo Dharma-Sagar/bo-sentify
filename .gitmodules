@@ -1,0 +1,3 @@
+[submodule "sentify/onto"]
+	path = sentify/onto
+	url = https://github.com/Dharma-Sagar/leavedonto
