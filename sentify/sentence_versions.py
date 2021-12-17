@@ -203,9 +203,9 @@ def format_bo(versions):
     return versions
 
 
-def generate_versions(in_file, out_file, lang='bo'):
+def generate_versions(in_file, out_file, lang='bo', format=False):
     versions = extract_versions(in_file)
-    if lang == 'bo':
+    if lang == 'bo' and format:
         versions = format_bo(versions)
 
     doc = docx.Document()

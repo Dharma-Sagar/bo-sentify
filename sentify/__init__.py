@@ -1,3 +1,5 @@
+import re
+
 import yaml
 from pathlib import Path
 
@@ -5,6 +7,19 @@ from .sentence_versions import generate_alternative_sentences, generate_versions
 from .corpus_segment import Tokenizer
 from .segmented_2_xlsx import generate_xlsx
 from .google_drive import RetrieveDriveFiles, PushDriveFiles
+from .onto.leavedonto import LeavedOnto
+from .datavalwb import DataValWB
+
+
+def create_onto(in_file, out_file):
+    template = "legend: [lemma, level1, level2, level3]\nont:\n  to organize:\n"
+    dump = in_file.read_text().replace('\n', ' ').lstrip('\ufeff').strip()
+    dump = re.sub(r' +', ' ', dump)
+    words = dump.split(' ')
+    ont = '\n'.join([f'  - ["{w}"]' for w in words])
+    ont = yaml.safe_load(template + ont)
+    lo = LeavedOnto(ont, out_file)
+    lo.convert2yaml()
 
 
 def prepare_folders(content_path, sub_folders):
@@ -55,6 +70,12 @@ def sentify_local(path_ids, lang='bo'):
 
         # 3. create .xlsx files in to_simplify from segmented .txt files from segmented
         elif cur == 3:
+            print('\ncreating the ontology...')
+            in_file = steps[cur - 1]
+            out_file = Path('content/0 resources') / (in_file.stem.split('_')[0] + '_onto.yaml')
+            if not out_file.is_file():
+                create_onto(in_file, out_file)
+
             print('\tcreating file to simplify...')
             in_file = steps[cur-1]
             out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '.xlsx')
