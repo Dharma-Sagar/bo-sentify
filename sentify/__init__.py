@@ -5,10 +5,11 @@ from pathlib import Path
 
 from .sentence_versions import generate_alternative_sentences, generate_versions
 from .corpus_segment import Tokenizer
-from .segmented_2_xlsx import generate_xlsx
+from .generate_to_simplify import generate_to_simplify
 from .google_drive import RetrieveDriveFiles, PushDriveFiles
 from .onto.leavedonto import LeavedOnto
-from .datavalwb import DataValWB
+from .dataval import DataVal
+from .generate_to_tag import generate_to_tag
 
 
 def create_onto(in_file, out_file):
@@ -32,18 +33,21 @@ def prepare_folders(content_path, sub_folders):
 
 def current_state(paths_ids):
     state = {}
-    for path, _ in paths_ids:
+    # leaving aside "O resources"
+    for path, _ in paths_ids[1:]:
         for f in path.glob('*'):
             stem = f.stem.split('_')[0]
             if stem not in state:
                 state[stem] = {1: None, 2: None, 3: None, 4: None}
             step = int(f.parts[1][0])
             state[stem][step] = f
-    return state
+
+    resources = {f.stem.split('_')[0]: f for f in paths_ids[0][0].glob('*.yaml')}
+    return state, resources
 
 
-def sentify_local(path_ids, lang='bo'):
-    state = current_state(path_ids)
+def sentify_local(path_ids, lang='bo', l_colors=None):
+    state, resources = current_state(path_ids)
     new_files = []
     T = Tokenizer(lang=lang)
     tok = None
@@ -61,43 +65,55 @@ def sentify_local(path_ids, lang='bo'):
                 tok = T.set_tok()
 
             in_file = steps[cur-1]
-            out_file = path_ids[cur-1][0] / (in_file.stem + '_segmented.txt')
+            out_file = path_ids[cur][0] / (in_file.stem + '_segmented.txt')
             T.tok_file(tok, in_file, out_file)
             new_files.append(out_file)
 
         # 2. manually correct the segmentation
             print('\t--> Please manually correct the segmentation.')
 
-        # 3. create .xlsx files in to_simplify from segmented .txt files from segmented
+        # 3. create the _totag.xlsx in to_tag from the segmented .txt file from segmented
         elif cur == 3:
-            print('\ncreating the ontology...')
-            in_file = steps[cur - 1]
+            print('\ncreating the file to tag...')
+            # TODO: merge the base onto and all the ones from individual files, only add data validation to new words.
+            in_file = steps[cur-1]
+            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_totag.xlsx')
+            if not out_file.is_file():
+                generate_to_tag(in_file, out_file, resources, l_colors=l_colors)
+
+        # 4. manually POS tag the segmented text
+            print('\t--> Please manually tag new words with their POS tag and level.')
+
+        # 5. create .xlsx files in to_simplify from segmented .txt files from segmented
+        elif cur == 4:
+            print('\t creating the onto from the tagged file...')
+            in_file = steps[cur-1]
             out_file = Path('content/0 resources') / (in_file.stem.split('_')[0] + '_onto.yaml')
             if not out_file.is_file():
                 create_onto(in_file, out_file)
 
             print('\tcreating file to simplify...')
             in_file = steps[cur-1]
-            out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '.xlsx')
-            generate_xlsx(in_file, out_file)
+            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '.xlsx')
+            generate_to_simplify(in_file, out_file, resources)
             new_files.append(out_file)
 
-        # 4. manually process the .xlsx files in to_simplify
+        # 6. manually process the .xlsx files in to_simplify
             print('\t--> Please manually simplify the sentences.')
 
-        # 5. generate alternative sentences as _sents.xlsx files in simplified from .xlsx files in to_simplify
-        elif cur == 4:
+        # 7. generate alternative sentences as _sents.xlsx files in simplified from .xlsx files in to_simplify
+        elif cur == 5:
             print('\tgenerating the alternative sentences...')
             in_file = steps[cur-1]
-            out_file = path_ids[cur - 1][0] / (in_file.stem.split('_')[0] + '_sents.xlsx')
+            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_sents.xlsx')
             generate_alternative_sentences(in_file, out_file, lang, format='xlsx')  # xlsx and docx are accepted
             new_files.append(out_file)
 
-        # 6. Generate versions as _versions.docx in versions from .xlsx files in _simplified
-        elif cur == 5:
+        # 8. Generate versions as _versions.docx in versions from .xlsx files in _simplified
+        elif cur == 6:
             print('\tgenerating simplified versions')
             in_file = steps[cur-1]
-            out_file = path_ids[cur - 1][0] / (in_file.stem.split('_')[0] + '_versions.docx')
+            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_versions.docx')
             generate_versions(in_file, out_file, lang)
             new_files.append(out_file)
 
@@ -128,18 +144,19 @@ def download_drive(path_ids):
         get.download_folder(sub, id)
 
 
-def sentencify(content_path, drive_ids, lang, mode='drive', subs=None):
+def sentencify(content_path, drive_ids, lang, mode='drive', subs=None, l_colors=None):
     if not subs:
-        subs = ['1 to_segment', '2 segmented', '3 to_simplify', '4 simplified', '5 versions']
+        subs = ['0 resources', '1 to_segment', '2 segmented', '3 to_tag',
+                '4 to_simplify', '5 simplified', '6 versions']
 
-    path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(5)]
+    path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(6)]
     prepare_folders(content_path, subs)  # prepare the folder structure
 
     if mode == 'local':
-        sentify_local(path_ids, lang=lang)
+        sentify_local(path_ids, lang=lang, l_colors=l_colors)
     elif mode == 'drive':
         download_drive(path_ids)
-        sentify_local(path_ids, lang=lang)
+        sentify_local(path_ids, lang=lang, l_colors=l_colors)
     else:
         raise ValueError('either "local" or "drive"')
 
@@ -152,12 +169,14 @@ def upload_to_drive(driver_folders):
     for f in files_list:
         if f.parts[1] == '2 segmented':
             to_upload.append((driver_folders[1], f))
-        elif f.parts[1] == '3 to_simplify':
+        elif f.parts[1] == '3 to_tag':
             to_upload.append((driver_folders[2], f))
-        elif f.parts[1] == '4 simplified':
+        elif f.parts[1] == '4 to_simplify':
             to_upload.append((driver_folders[3], f))
-        elif f.parts[1] == '5 versions':
+        elif f.parts[1] == '5 simplified':
             to_upload.append((driver_folders[4], f))
+        elif f.parts[1] == '6 versions':
+            to_upload.append((driver_folders[5], f))
 
     pf = PushDriveFiles()
     pf.push_files(to_upload)
@@ -187,15 +206,15 @@ drive_folders:
         in_file.write_text(default)
 
     struct = yaml.safe_load(in_file.read_text())
-    return struct['mode'], struct['lang'], struct['input'], struct['drive_folders']
+    return struct['mode'], struct['lang'], struct['input'], struct['drive_folders'], struct['level_colors']
 
 
 def sentify():
-    mode, lang, content, driver_folders = read_config()
+    mode, lang, content, driver_folders, level_colors = read_config()
     content = Path(content)
     if mode == 'local':
-        sentencify(content, driver_folders, lang, mode=mode)
+        sentencify(content, driver_folders, lang, mode=mode, l_colors=level_colors)
     elif mode == 'drive':
-        sentencify(content, driver_folders, lang, mode=mode)
+        sentencify(content, driver_folders, lang, mode=mode, l_colors=level_colors)
     elif mode == 'upload':
         upload_to_drive(driver_folders)
