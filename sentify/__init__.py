@@ -10,17 +10,7 @@ from .google_drive import RetrieveDriveFiles, PushDriveFiles
 from .onto.leavedonto import LeavedOnto
 from .dataval import DataVal
 from .generate_to_tag import generate_to_tag
-
-
-def create_onto(in_file, out_file):
-    template = "legend: [lemma, level1, level2, level3]\nont:\n  to organize:\n"
-    dump = in_file.read_text().replace('\n', ' ').lstrip('\ufeff').strip()
-    dump = re.sub(r' +', ' ', dump)
-    words = dump.split(' ')
-    ont = '\n'.join([f'  - ["{w}"]' for w in words])
-    ont = yaml.safe_load(template + ont)
-    lo = LeavedOnto(ont, out_file)
-    lo.convert2yaml()
+from .onto_from_tagged import onto_from_tagged
 
 
 def prepare_folders(content_path, sub_folders):
@@ -90,7 +80,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
             in_file = steps[cur-1]
             out_file = Path('content/0 resources') / (in_file.stem.split('_')[0] + '_onto.yaml')
             if not out_file.is_file():
-                create_onto(in_file, out_file)
+                onto_from_tagged(in_file, out_file, resources)
 
             print('\tcreating file to simplify...')
             in_file = steps[cur-1]
