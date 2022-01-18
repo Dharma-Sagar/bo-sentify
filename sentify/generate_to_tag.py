@@ -3,7 +3,7 @@ from openpyxl.styles import Font, Alignment, PatternFill, Protection
 
 from .onto.leavedonto import OntoManager
 from .dataval import DataVal
-from .xlsx_utils import resize_sheet
+from .utils import resize_sheet
 
 
 def rows_from_lines(lines):
@@ -43,8 +43,10 @@ def generate_to_tag(in_file, out_file, resources, l_colors=None):
     rows = rows_from_lines(lines)
 
     # load available ontos
-    onto = OntoManager(resources.pop('full'))
-    onto.batch_merge_to_onto(list(resources.values()))
+    main_onto, other_ontos = resources['general_onto'], [r for r in resources.values() if r.stem != 'general_onto']
+    om = OntoManager(main_onto)
+    om.batch_merge_to_onto(other_ontos)
+    onto = om.onto1
 
     # prepare data validation for POS and levels
     dv = DataVal(wb)
@@ -65,7 +67,7 @@ def generate_to_tag(in_file, out_file, resources, l_colors=None):
             col = m + 1
 
             # check if word exists in onto
-            found = onto.onto1.find_word(el)
+            found = onto.find_word(el)
             found_pos = found[0][0][0] if found else None
             entries = found[0][1] if found else None
 
@@ -88,7 +90,7 @@ def generate_to_tag(in_file, out_file, resources, l_colors=None):
             # add level
             level_cell = ws.cell(row=level_row, column=col)
             level_cell.protection = Protection(locked=False)
-            level_cell.value = onto.onto1.get_field_value(entries[0], 'level') if entries else ''
+            level_cell.value = onto.get_field_value(entries[0], 'level') if entries else ''
             level_cell.font = ft_level
             level_cell.alignment = alignmnt
             dv.add_val_to_cell(val_name='level', sheet_name=sheet_name, row=level_row, col=col)

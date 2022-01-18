@@ -2,22 +2,23 @@
 mode: local
 # "bo" and "en" are currently supported
 lang: bo
-# the relative path to the folder containing the 5 folders of the data
+# the relative path to the folder containing the 7 folders of the data
 input: content
 # Google Drive folder ids.
 # add the ids right after each "- ". keep the order from 1 to 5 from the drive folders
 # to find the id, open the folder, take everything following the last "/" in the url
 drive_folders:
-- 1zThPAj0l1nURxIJ8YO6FJbECgZPYsiwX
 - 13P-zW_7XejOSDko83viD7p0UaKz_iCkD
 - 1MdGNFLiELLKq5HsiZfmmEi4CCCMLYcgV
 - 17u8RbOKdgaFhCqlz5wcM_TEb61tDvVgv
+- 1zThPAj0l1nURxIJ8YO6FJbECgZPYsiwX
 - 1P-C8WbEwwcB5_rgNgmKgw2qTQa_aPZxG
 - 1OWT014h1F5ccyalhgeAX5nTx7t5z0JQL
+- 1KrLBfRI43JCzRZQRha9Np8zwmnYLUe5U
 # levels
 level_colors:
-- A0: 00FFCC99
-- A1: 00666699
-- A2: 00003366
-- A2+: 00339966
-- B1: 00003300
+  A0: '00FFCC99'
+  A1: '00666699'
+  A2: '00003366'
+  A2+: '00339966'
+  B1: '00003300'

@@ -1,14 +1,12 @@
-from pathlib import Path
-
-from openpyxl import load_workbook, Workbook
+from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from .onto.leavedonto import LeavedOnto
+from .onto.leavedonto import OntoManager
 from .dataval import DataVal
-from .xlsx_utils import resize_sheet
+from .utils import resize_sheet
 
 
-def generate_to_simplify(in_file, out_file, resources):
+def generate_to_simplify(in_file, out_file, resources, l_colors):
     font = 'Jomolhari'
     ft_sent = Font(font, size=12)
     alignmnt = Alignment(horizontal="left", vertical="center")
@@ -16,6 +14,7 @@ def generate_to_simplify(in_file, out_file, resources):
     wb = Workbook()
     wb.remove(wb.get_sheet_by_name('Sheet'))
 
+    # add sentences to sheets
     lines = in_file.read_text().lstrip('\ufeff').split('\n')
     for s, sent in enumerate(lines):
         ws = wb.create_sheet(title=str(s))
@@ -28,9 +27,13 @@ def generate_to_simplify(in_file, out_file, resources):
                 cell.alignment = alignmnt
         resize_sheet(ws)
 
-    onto_file = resources[out_file.stem]
-    onto = LeavedOnto(onto_file)
+    # load ontos
+    main_onto, other_ontos = resources['general_onto'], [r for r in resources.values() if r.stem != 'general_onto']
+    om = OntoManager(main_onto)
+    om.batch_merge_to_onto(other_ontos)
+    onto = om.onto1
 
+    # add data validation for synonyms and color cells according to levels
     dv = DataVal(wb)
     val_num = 0
     for name in wb.sheetnames:
@@ -47,9 +50,11 @@ def generate_to_simplify(in_file, out_file, resources):
             # extract all synonyms
             syns = [word]
             for path, entries in found:
-                syns.append(onto.get_field_value(entries, 'lemma'))
-                s = onto.get_field_value(entries, 'synonyms')
-                syns.extend([a for a in s.split(' ') if a])
+                s = []
+                for e in entries:
+                    syns.append(onto.get_field_value(e, 'lemma'))
+                    s = onto.get_field_value(e, 'synonyms')
+                    syns.extend([a for a in s.split(' ') if a])
             syns = list(set(syns))
 
             # pass if no synonyms
@@ -70,7 +75,7 @@ def generate_to_simplify(in_file, out_file, resources):
             }
             # TODO: decide not only based on first element of list, but use combination of POS + word to find entries
             if found:
-                level = onto.get_field_value(found[0][1], 'level')
-                cell.fill = PatternFill("solid", fgColor=colors[level])
+                level = onto.get_field_value(found[0][1][0], 'level')
+                cell.fill = PatternFill("solid", fgColor=l_colors[level])
 
     wb.save(out_file)

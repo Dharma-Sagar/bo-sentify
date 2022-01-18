@@ -26,13 +26,15 @@ def current_state(paths_ids):
     # leaving aside "O resources"
     for path, _ in paths_ids[1:]:
         for f in path.glob('*'):
+            if f.suffix not in ['.txt', '.xlsx']:
+                continue
             stem = f.stem.split('_')[0]
             if stem not in state:
                 state[stem] = {1: None, 2: None, 3: None, 4: None}
             step = int(f.parts[1][0])
             state[stem][step] = f
 
-    resources = {f.stem.split('_')[0]: f for f in paths_ids[0][0].glob('*.yaml')}
+    resources = {f.stem: f for f in paths_ids[0][0].glob('*.yaml')}
     return state, resources
 
 
@@ -70,29 +72,35 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
             out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_totag.xlsx')
             if not out_file.is_file():
                 generate_to_tag(in_file, out_file, resources, l_colors=l_colors)
+                new_files.append(out_file)
 
         # 4. manually POS tag the segmented text
-            print('\t--> Please manually tag new words with their POS tag and level.')
+            print('\t--> Please manually tag new words with their POS tag and level. (words not tagged will be ignored)')
 
         # 5. create .xlsx files in to_simplify from segmented .txt files from segmented
         elif cur == 4:
             print('\t creating the onto from the tagged file...')
             in_file = steps[cur-1]
-            out_file = Path('content/0 resources') / (in_file.stem.split('_')[0] + '_onto.yaml')
+            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_onto.yaml')
             if not out_file.is_file():
                 onto_from_tagged(in_file, out_file, resources)
+                new_files.append(out_file)
 
+        # 6. manually fill in the onto
+            print('\t--> Please integrate new words in the onto from "to_organize" sections and add synonyms.')
+
+        elif cur == 5:
             print('\tcreating file to simplify...')
-            in_file = steps[cur-1]
+            in_file = steps[cur-2]
             out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '.xlsx')
-            generate_to_simplify(in_file, out_file, resources)
+            generate_to_simplify(in_file, out_file, resources, l_colors)
             new_files.append(out_file)
 
         # 6. manually process the .xlsx files in to_simplify
             print('\t--> Please manually simplify the sentences.')
 
         # 7. generate alternative sentences as _sents.xlsx files in simplified from .xlsx files in to_simplify
-        elif cur == 5:
+        elif cur == 6:
             print('\tgenerating the alternative sentences...')
             in_file = steps[cur-1]
             out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_sents.xlsx')
@@ -100,7 +108,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
             new_files.append(out_file)
 
         # 8. Generate versions as _versions.docx in versions from .xlsx files in _simplified
-        elif cur == 6:
+        elif cur == 7:
             print('\tgenerating simplified versions')
             in_file = steps[cur-1]
             out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_versions.docx')
@@ -136,8 +144,8 @@ def download_drive(path_ids):
 
 def sentencify(content_path, drive_ids, lang, mode='drive', subs=None, l_colors=None):
     if not subs:
-        subs = ['0 resources', '1 to_segment', '2 segmented', '3 to_tag',
-                '4 to_simplify', '5 simplified', '6 versions']
+        subs = ['4 vocabulary', '1 to_segment', '2 segmented', '3 to_tag', '4 vocabulary'
+                '5 to_simplify', '6 simplified', '7 versions']
 
     path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(6)]
     prepare_folders(content_path, subs)  # prepare the folder structure
@@ -161,12 +169,14 @@ def upload_to_drive(driver_folders):
             to_upload.append((driver_folders[1], f))
         elif f.parts[1] == '3 to_tag':
             to_upload.append((driver_folders[2], f))
-        elif f.parts[1] == '4 to_simplify':
+        elif f.parts[1] == '4 vocabulary':
             to_upload.append((driver_folders[3], f))
-        elif f.parts[1] == '5 simplified':
+        elif f.parts[1] == '5 to_simplify':
             to_upload.append((driver_folders[4], f))
-        elif f.parts[1] == '6 versions':
+        elif f.parts[1] == '6 simplified':
             to_upload.append((driver_folders[5], f))
+        elif f.parts[1] == '7 versions':
+            to_upload.append((driver_folders[6], f))
 
     pf = PushDriveFiles()
     pf.push_files(to_upload)

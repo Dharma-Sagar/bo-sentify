@@ -9,8 +9,9 @@ def onto_from_tagged(in_file, out_file, resources):
     tagged = get_entries(in_file)
 
     # load all ontos
-    om = OntoManager(resources.pop('full'))
-    om.batch_merge_to_onto(resources.values())
+    main_onto, other_ontos = resources['full_onto'], [r for r in resources.values() if r.stem != 'full_onto']
+    om = OntoManager(main_onto)
+    om.batch_merge_to_onto(other_ontos)
 
     # populate new onto:
     trie = tagged_to_trie(tagged, om.onto1)
@@ -31,7 +32,7 @@ def get_entries(in_file):
             pos = ws.cell(r+1, col).value
             level = ws.cell(r+2, col).value
             entry = (word, pos, level)
-            if entry not in tagged:
+            if pos and level and entry not in tagged:
                 tagged.append(entry)
 
     return tagged
