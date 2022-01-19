@@ -11,13 +11,13 @@ bo_sort = TibetanSort()
 
 def get_sentences_after(props, length):
     if length == len(props):
-        return props[length-1]
+        return props[length - 1]
     else:
         subprops = get_sentences_after(props, length + 1)
         res = []
-        for thisprop in props[length-1]:
+        for thisprop in props[length - 1]:
             for thissubprop in subprops:
-                res.append(thisprop + ' ' + thissubprop)
+                res.append(thisprop + " " + thissubprop)
         return res
 
 
@@ -53,7 +53,7 @@ def get_chunk_idx(row):
 
 
 def process_chunks(sheets, lang):
-    sep = '' if lang == 'bo' else ' '
+    sep = "" if lang == "bo" else " "
     total_chunks = dict()
     for name, v in sheets.items():
         meta, rows = v
@@ -62,15 +62,17 @@ def process_chunks(sheets, lang):
         chunks = []
         for a, b in idx:
             # generate all versions
-            chunk_versions = [r[a:b+1] for r in rows]
-            chunk_versions = [sep.join([c for c in chunk if c]) for chunk in chunk_versions]
+            chunk_versions = [r[a : b + 1] for r in rows]
+            chunk_versions = [
+                sep.join([c for c in chunk if c]) for chunk in chunk_versions
+            ]
             # remove duplicates
             chunk_versions = list(set([c for c in chunk_versions if c]))
 
             # add optionality
-            required = True if [m for m in meta[a:b+1] if m] else False
+            required = True if [m for m in meta[a : b + 1] if m] else False
             if not required:
-                chunk_versions.append('')
+                chunk_versions.append("")
 
             chunks.append(chunk_versions)
         total_chunks[name] = chunks
@@ -78,36 +80,36 @@ def process_chunks(sheets, lang):
 
 
 def export_xlsx(sentences, out_file):
-    font = 'Jomolhari'
-    ft_orig = Font(font, size=20, bold=True, color='0000CC')
-    ft_section = Font(font, size=15, italic=True, color='6600CC')
+    font = "Jomolhari"
+    ft_orig = Font(font, size=20, bold=True, color="0000CC")
+    ft_section = Font(font, size=15, italic=True, color="6600CC")
     ft_sent = Font(font, size=12)
     alignmnt = Alignment(horizontal="left", vertical="center")
 
     wb = Workbook()
-    wb.remove(wb.get_sheet_by_name('Sheet'))
+    wb.remove(wb.get_sheet_by_name("Sheet"))
 
     for sent, i in sentences.items():
         total_sents, orig = i
         ws = wb.create_sheet(title=sent)
-        ws['A1'] = 'འདམ་ཀ'
-        ws['A1'].font = ft_sent
+        ws["A1"] = "འདམ་ཀ"
+        ws["A1"].font = ft_sent
         current_line = 1
-        cell = f'B{current_line}'
+        cell = f"B{current_line}"
         ws[cell] = orig
         ws[cell].font = ft_orig
         ws[cell].alignment = alignmnt
         current_line += 2
         for size in sorted(total_sents.keys()):
-            cell = f'C{current_line}'
-            ws[cell] = f'དུམ་བུ་ {size}ཡོད་པ།'
+            cell = f"C{current_line}"
+            ws[cell] = f"དུམ་བུ་ {size}ཡོད་པ།"
             ws[cell].font = ft_section
             ws[cell].alignment = alignmnt
             current_line += 1
 
             sents = total_sents[size]
             for s in sents:
-                cell = f'D{current_line}'
+                cell = f"D{current_line}"
                 ws[cell] = s
                 ws[cell].font = ft_sent
                 ws[cell].alignment = alignmnt
@@ -119,12 +121,12 @@ def export_docx(sentences, out_file):
     doc = docx.Document()
     for section, i in sentences.items():
         sents, orig = i
-        doc.add_heading(f'{section} {orig}', level=1)
-        doc.add_paragraph('')
+        doc.add_heading(f"{section} {orig}", level=1)
+        doc.add_paragraph("")
         for size in sorted(sents.keys()):
-            doc.add_heading(f'དུམ་བུ་ {size}ཡོད་པ།', level=2)
+            doc.add_heading(f"དུམ་བུ་ {size}ཡོད་པ།", level=2)
             for s in sents[size]:
-                doc.add_paragraph(s, style='List Bullet 2')
+                doc.add_paragraph(s, style="List Bullet 2")
     doc.save(out_file)
 
 
@@ -133,7 +135,7 @@ def sort_sents(sents):
     # group by size
     by_size = defaultdict(list)
     for sent in sents:
-        chunks = [s for s in sent.split(' ') if s]
+        chunks = [s for s in sent.split(" ") if s]
         l = len(chunks)
         by_size[l].append(sent)
     # sort groups
@@ -142,7 +144,7 @@ def sort_sents(sents):
     return by_size, orig
 
 
-def generate_alternative_sentences(in_file, out_file, lang, format='xlsx'):
+def generate_alternative_sentences(in_file, out_file, lang, format="xlsx"):
     """
 
     :param in_file: xlsx file, one sentence per sheet.
@@ -156,18 +158,18 @@ def generate_alternative_sentences(in_file, out_file, lang, format='xlsx'):
     sentences = dict()
     for name, parts in chunks.items():
         sents = get_sentences_after(parts, 1)
-        sents = [re.sub(r'\s+', ' ', s) for s in sents]  # single spaces
-        if lang != 'bo':
-            sents = [re.sub(r' [,.;]', '\1', s) for s in sents]
-            sents = [s.replace(' - ', '-') for s in sents]
+        sents = [re.sub(r"\s+", " ", s) for s in sents]  # single spaces
+        if lang != "bo":
+            sents = [re.sub(r" [,.;]", "\1", s) for s in sents]
+            sents = [s.replace(" - ", "-") for s in sents]
         sents = sort_sents(sents)
         sentences[name] = sents
-    if format == 'docx':
+    if format == "docx":
         export_docx(sentences, out_file)
-    elif format == 'xlsx':
+    elif format == "xlsx":
         export_xlsx(sentences, out_file)
     else:
-        raise NotImplementedError('permitted formats: xlsx and docx')
+        raise NotImplementedError("permitted formats: xlsx and docx")
 
 
 def extract_versions(in_file):
@@ -177,9 +179,9 @@ def extract_versions(in_file):
         for i, row in enumerate(sheet):
             values = [r.value for r in row]
             version = values[0] if i != 0 else None
-            if version != None:
+            if version is not None:
                 version = str(version)
-                for v in version.split(' '):
+                for v in version.split(" "):
                     if v not in versions:
                         versions[v] = []
                     sent = values[3].strip()
@@ -191,25 +193,25 @@ def format_bo(versions):
     for v, sents in versions.items():
         formatted = []
         for sent in sents:
-            sent = sent.replace('་-', '')
-            sent = sent.replace(' ', '')
-            sent = sent.strip('་')
-            sent = sent.replace('_', ' ')
-            sent = re.sub(r'([གདནབམའརལསིེོུ])་(།)', r'\1\2', sent)
-            if not sent.endswith('།') and not sent.endswith('ག'):
-                sent += '།'
+            sent = sent.replace("་-", "")
+            sent = sent.replace(" ", "")
+            sent = sent.strip("་")
+            sent = sent.replace("_", " ")
+            sent = re.sub(r"([གདནབམའརལསིེོུ])་(།)", r"\1\2", sent)
+            if not sent.endswith("།") and not sent.endswith("ག"):
+                sent += "།"
             formatted.append(sent)
         versions[v] = formatted
     return versions
 
 
-def generate_versions(in_file, out_file, lang='bo', format=False):
+def generate_versions(in_file, out_file, lang="bo", format=False):
     versions = extract_versions(in_file)
-    if lang == 'bo' and format:
+    if lang == "bo" and format:
         versions = format_bo(versions)
 
     doc = docx.Document()
     for ver_name, sents in versions.items():
         doc.add_heading(str(ver_name), level=1)
-        doc.add_paragraph(' '.join(sents))
+        doc.add_paragraph(" ".join(sents))
     doc.save(out_file)

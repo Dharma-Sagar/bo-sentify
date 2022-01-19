@@ -11,7 +11,7 @@ def rows_from_lines(lines):
 
     words = []
     for l in lines:
-        words.extend(l.split(' '))
+        words.extend(l.split(" "))
 
     rows = []
     cur_row = []
@@ -28,35 +28,46 @@ def rows_from_lines(lines):
 
 
 def generate_to_tag(in_file, out_file, resources, l_colors=None):
-    font = 'Jomolhari'
-    ft_words = Font(font, size=17, color='000c1d91')
-    ft_pos = Font(font, size=13, color='004e4f54')
-    ft_level = Font(size=11, color='004e4f54')
-    new_bgcolor = PatternFill("solid", fgColor='0090f0a9')
+    font = "Jomolhari"
+    ft_words = Font(font, size=17, color="000c1d91")
+    ft_pos = Font(font, size=13, color="004e4f54")
+    ft_level = Font(size=11, color="004e4f54")
+    new_bgcolor = PatternFill("solid", fgColor="0090f0a9")
     alignmnt = Alignment(horizontal="left", vertical="center")
 
     wb = Workbook()
-    wb.remove(wb.get_sheet_by_name('Sheet'))
+    wb.remove(wb.get_sheet_by_name("Sheet"))
 
     # read input file into rows
-    lines = in_file.read_text().lstrip('\ufeff').split('\n')
+    lines = in_file.read_text().lstrip("\ufeff").split("\n")
     rows = rows_from_lines(lines)
 
     # load available ontos
-    main_onto, other_ontos = resources['general_onto'], [r for r in resources.values() if r.stem != 'general_onto']
+    main_onto = resources["general_onto"]
+    other_ontos = [r for r in resources.values() if r.stem != "general_onto"]
+
     om = OntoManager(main_onto)
     om.batch_merge_to_onto(other_ontos)
     onto = om.onto1
 
     # prepare data validation for POS and levels
     dv = DataVal(wb)
-    pos = ['ཚིག་ཕྲད།', 'མིང་ཚིག', 'བྱ་ཚིག', 'རྒྱན་ཚིག', 'བསྣན་ཚིག', 'ཚབ་ཚིག', 'ཚེག་ཤད།', 'ཁྱད་ཚིག']
-    dv.add_validator('POS', pos)
-    levels = ['A0', 'A1', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C1+']
-    dv.add_validator('level', levels)
+    pos = [
+        "ཚིག་ཕྲད།",
+        "མིང་ཚིག",
+        "བྱ་ཚིག",
+        "རྒྱན་ཚིག",
+        "བསྣན་ཚིག",
+        "ཚབ་ཚིག",
+        "ཚེག་ཤད།",
+        "ཁྱད་ཚིག",
+    ]
+    dv.add_validator("POS", pos)
+    levels = ["A0", "A1", "A2", "A2+", "B1", "B1+", "B2", "B2+", "C1", "C1+"]
+    dv.add_validator("level", levels)
 
     # create sheet and fill it
-    sheet_name = in_file.stem.split('_')[0]
+    sheet_name = in_file.stem.split("_")[0]
     ws = wb.create_sheet(title=sheet_name)
     ws.protection.sheet = True
     for n, r in enumerate(rows):
@@ -80,20 +91,26 @@ def generate_to_tag(in_file, out_file, resources, l_colors=None):
             # add POS
             pos_cell = ws.cell(row=pos_row, column=col)
             pos_cell.protection = Protection(locked=False)
-            pos_cell.value = found_pos if found_pos else ''
+            pos_cell.value = found_pos if found_pos else ""
             pos_cell.font = ft_pos
             pos_cell.alignment = alignmnt
-            dv.add_val_to_cell(val_name='POS', sheet_name=sheet_name, row=pos_row, col=col)
+            dv.add_val_to_cell(
+                val_name="POS", sheet_name=sheet_name, row=pos_row, col=col
+            )
             if not entries:
                 pos_cell.fill = new_bgcolor
 
             # add level
             level_cell = ws.cell(row=level_row, column=col)
             level_cell.protection = Protection(locked=False)
-            level_cell.value = onto.get_field_value(entries[0], 'level') if entries else ''
+            level_cell.value = (
+                onto.get_field_value(entries[0], "level") if entries else ""
+            )
             level_cell.font = ft_level
             level_cell.alignment = alignmnt
-            dv.add_val_to_cell(val_name='level', sheet_name=sheet_name, row=level_row, col=col)
+            dv.add_val_to_cell(
+                val_name="level", sheet_name=sheet_name, row=level_row, col=col
+            )
             if not entries:
                 level_cell.fill = new_bgcolor
 
@@ -101,7 +118,8 @@ def generate_to_tag(in_file, out_file, resources, l_colors=None):
         ws.row_dimensions[row].height = 30
         ws.row_dimensions[pos_row].height = 15
         ws.row_dimensions[level_row].height = 15
-        ws.row_dimensions[level_row+1].height = 30  # size of empty row between two lines
+        ws.row_dimensions[level_row + 1].height = 30
+        # size of empty row between two lines
 
-    resize_sheet(ws, mode='width')
+    resize_sheet(ws, mode="width")
     wb.save(out_file)

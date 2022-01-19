@@ -1,5 +1,9 @@
 from openpyxl.worksheet.datavalidation import DataValidation
-from openpyxl.utils.cell import coordinate_from_string, column_index_from_string, get_column_letter
+from openpyxl.utils.cell import (
+    coordinate_from_string,
+    column_index_from_string,
+    get_column_letter,
+)
 
 
 """ ***usage example***
@@ -23,20 +27,20 @@ class DataVal:
     def __init__(self, wb):
         self.wb = wb
         self.msgs = {
-            'error': 'Your entry is not in the list',
-            'error_title': 'Invalid Entry',
-            'prompt': '',
-            'prompt_title': ''
+            "error": "Your entry is not in the list",
+            "error_title": "Invalid Entry",
+            "prompt": "",
+            "prompt_title": "",
         }
         self.validators = {}
 
     def add_validator(self, title, values):
-        values = ','.join(values)
+        values = ",".join(values)
         dv = DataValidation(type="list", formula1=f'"{values}"')
-        dv.error = self.msgs['error']
-        dv.errorTitle = self.msgs['error_title']
-        dv.prompt = self.msgs['prompt']
-        dv.promptTitle = self.msgs['prompt_title']
+        dv.error = self.msgs["error"]
+        dv.errorTitle = self.msgs["error_title"]
+        dv.prompt = self.msgs["prompt"]
+        dv.promptTitle = self.msgs["prompt_title"]
 
         self.validators[title] = dv
 
@@ -53,8 +57,11 @@ class DataVal:
             col, row = coordinate_from_string(idx)
             col = column_index_from_string(col)
         if not idx:
-            idx = f'{get_column_letter(col)}{row}'
-        if self.validators[val_name] not in self.wb[sheet_name].data_validations.dataValidation:
+            idx = f"{get_column_letter(col)}{row}"
+        if (
+            self.validators[val_name]
+            not in self.wb[sheet_name].data_validations.dataValidation
+        ):
             self.wb[sheet_name].add_data_validation(self.validators[val_name])
 
         self.validators[val_name].add(idx)
