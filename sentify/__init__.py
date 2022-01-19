@@ -93,7 +93,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
         elif cur == 5:
             print('\tcreating file to simplify...')
             in_file = steps[cur-3]
-            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '.xlsx')
+            out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '.xlsx')
             generate_to_simplify(in_file, out_file, resources, l_colors)
             new_files.append(out_file)
 
@@ -104,7 +104,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
         elif cur == 6:
             print('\tgenerating the alternative sentences...')
             in_file = steps[cur-1]
-            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_sents.xlsx')
+            out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '_sents.xlsx')
             generate_alternative_sentences(in_file, out_file, lang, format='xlsx')  # xlsx and docx are accepted
             new_files.append(out_file)
 
@@ -112,7 +112,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
         elif cur == 7:
             print('\tgenerating simplified versions')
             in_file = steps[cur-1]
-            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_versions.docx')
+            out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '_versions.docx')
             generate_versions(in_file, out_file, lang)
             new_files.append(out_file)
 
@@ -148,7 +148,7 @@ def sentencify(content_path, drive_ids, lang, mode='drive', subs=None, l_colors=
         subs = ['1 to_segment', '2 segmented', '3 to_tag', '4 vocabulary',
                 '5 to_simplify', '6 simplified', '7 versions']
 
-    path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(6)]
+    path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(7)]
     prepare_folders(content_path, subs)  # prepare the folder structure
 
     if mode == 'local':
