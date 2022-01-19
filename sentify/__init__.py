@@ -26,15 +26,15 @@ def current_state(paths_ids):
     # leaving aside "O resources"
     for path, _ in paths_ids[1:]:
         for f in path.glob('*'):
-            if f.suffix not in ['.txt', '.xlsx']:
+            if f.suffix not in ['.txt', '.xlsx', '.yaml']:
                 continue
             stem = f.stem.split('_')[0]
             if stem not in state:
-                state[stem] = {1: None, 2: None, 3: None, 4: None}
+                state[stem] = {2: None, 3: None, 4: None, 5: None, 6: None, 7: None}
             step = int(f.parts[1][0])
             state[stem][step] = f
 
-    resources = {f.stem: f for f in paths_ids[0][0].glob('*.yaml')}
+    resources = {f.stem: f for f in paths_ids[3][0].glob('*.yaml')}
     return state, resources
 
 
@@ -46,8 +46,8 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
 
     for file, steps in state.items():
         print(file)
-        cur = 1
-        while cur <= 4 and steps[cur]:
+        cur = 2  # starting at step 2: segmented text. (segmentation should be done with corpus_segment.py
+        while cur <= 7 and steps[cur]:
             cur += 1
 
         # 1. tokenize .txt files in to_segment, tokenized are in segmented as _segmented.txt files
@@ -77,11 +77,11 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
         # 4. manually POS tag the segmented text
             print('\t--> Please manually tag new words with their POS tag and level. (words not tagged will be ignored)')
 
-        # 5. create .xlsx files in to_simplify from segmented .txt files from segmented
+        # 5. create .yaml ontology files from tagged .xlsx files from to_tag
         elif cur == 4:
             print('\t creating the onto from the tagged file...')
             in_file = steps[cur-1]
-            out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '_onto.yaml')
+            out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '_onto.yaml')
             if not out_file.is_file():
                 onto_from_tagged(in_file, out_file, resources)
                 new_files.append(out_file)
@@ -89,17 +89,18 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
         # 6. manually fill in the onto
             print('\t--> Please integrate new words in the onto from "to_organize" sections and add synonyms.')
 
+        # 7. create .xlsx files in to_simplify from segmented .txt files from segmented
         elif cur == 5:
             print('\tcreating file to simplify...')
-            in_file = steps[cur-2]
+            in_file = steps[cur-3]
             out_file = path_ids[cur][0] / (in_file.stem.split('_')[0] + '.xlsx')
             generate_to_simplify(in_file, out_file, resources, l_colors)
             new_files.append(out_file)
 
-        # 6. manually process the .xlsx files in to_simplify
+        # 8. manually process the .xlsx files in to_simplify
             print('\t--> Please manually simplify the sentences.')
 
-        # 7. generate alternative sentences as _sents.xlsx files in simplified from .xlsx files in to_simplify
+        # 9. generate alternative sentences as _sents.xlsx files in simplified from .xlsx files in to_simplify
         elif cur == 6:
             print('\tgenerating the alternative sentences...')
             in_file = steps[cur-1]
@@ -107,7 +108,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
             generate_alternative_sentences(in_file, out_file, lang, format='xlsx')  # xlsx and docx are accepted
             new_files.append(out_file)
 
-        # 8. Generate versions as _versions.docx in versions from .xlsx files in _simplified
+        # 10. Generate versions as _versions.docx in versions from .xlsx files in _simplified
         elif cur == 7:
             print('\tgenerating simplified versions')
             in_file = steps[cur-1]
@@ -144,7 +145,7 @@ def download_drive(path_ids):
 
 def sentencify(content_path, drive_ids, lang, mode='drive', subs=None, l_colors=None):
     if not subs:
-        subs = ['4 vocabulary', '1 to_segment', '2 segmented', '3 to_tag', '4 vocabulary'
+        subs = ['1 to_segment', '2 segmented', '3 to_tag', '4 vocabulary',
                 '5 to_simplify', '6 simplified', '7 versions']
 
     path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(6)]

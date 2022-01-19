@@ -9,7 +9,7 @@ def onto_from_tagged(in_file, out_file, resources):
     tagged = get_entries(in_file)
 
     # load all ontos
-    main_onto, other_ontos = resources['full_onto'], [r for r in resources.values() if r.stem != 'full_onto']
+    main_onto, other_ontos = resources['general_onto'], [r for r in resources.values() if r.stem != 'general_onto']
     om = OntoManager(main_onto)
     om.batch_merge_to_onto(other_ontos)
 
