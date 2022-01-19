@@ -113,7 +113,7 @@ def sentify_local(path_ids, lang='bo', l_colors=None):
             print('\tgenerating simplified versions')
             in_file = steps[cur-1]
             out_file = path_ids[cur-1][0] / (in_file.stem.split('_')[0] + '_versions.docx')
-            generate_versions(in_file, out_file, lang)
+            generate_versions(in_file, out_file, lang, format=True)
             new_files.append(out_file)
 
         else:
