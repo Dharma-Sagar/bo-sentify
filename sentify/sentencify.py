@@ -8,7 +8,15 @@ from .onto_from_tagged import onto_from_tagged
 from .drive import download_drive
 
 
-def sentencify(content_path, drive_ids, lang, mode="local", subs=None, l_colors=None, basis_onto=None):
+def sentencify(
+    content_path,
+    drive_ids,
+    lang,
+    mode="local",
+    subs=None,
+    l_colors=None,
+    basis_onto=None,
+):
     if not subs:
         subs = [
             "1 to_segment",
@@ -40,7 +48,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
 
     for file, steps in state.items():
         print(file)
-        cur = 2
+        cur = 1
         # starting at step 2: segmented text. (segmentation should be done with corpus_segment.py
         while cur <= 7 and steps[cur]:
             cur += 1
@@ -65,7 +73,9 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
             print("\ncreating the file to tag...")
             # TODO: merge the base onto and all the ones from individual files, only add data validation to new words.
             in_file = steps[cur - 1]
-            out_file = path_ids[cur-1][0] / (in_file.stem.split("_")[0] + "_totag.xlsx")
+            out_file = path_ids[cur - 1][0] / (
+                in_file.stem.split("_")[0] + "_totag.xlsx"
+            )
             if not out_file.is_file():
                 generate_to_tag(in_file, out_file, resources, basis_onto=basis_onto)
                 new_files.append(out_file)
@@ -96,7 +106,9 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
             print("\tcreating file to simplify...")
             in_file = steps[cur - 3]
             out_file = path_ids[cur - 1][0] / (in_file.stem.split("_")[0] + ".xlsx")
-            generate_to_simplify(in_file, out_file, resources, l_colors, basis_onto=basis_onto)
+            generate_to_simplify(
+                in_file, out_file, resources, l_colors, basis_onto=basis_onto
+            )
             new_files.append(out_file)
 
             # 8. manually process the .xlsx files in to_simplify
@@ -131,11 +143,20 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
 
 
 def current_state(paths_ids):
+    file_type = {
+        "1 to_segment": ".txt",
+        "2 segmented": ".txt",
+        "3 to_tag": ".xlsx",
+        "4 vocabulary": ".yaml",
+        "5 to_simplify": ".xlsx",
+        "6 simplified": ".xlsx",
+        "7 versions": ".docx",
+    }
     state = {}
-    # starting from segmented
-    for path, _ in paths_ids[1:]:
+    resources = {}
+    for path, _ in paths_ids:
         for f in path.glob("*"):
-            if f.suffix not in [".txt", ".xlsx", ".yaml", '.docx']:
+            if f.suffix != file_type[path.stem]:
                 continue
             stem = f.stem.split("_")[0]
             if stem not in state:
