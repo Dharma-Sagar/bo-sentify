@@ -13,7 +13,7 @@ def onto_from_tagged(in_file, out_file, resources, basis_onto=None):
     om.batch_merge_to_onto(resources.values())
 
     # populate new onto:
-    trie = tagged_to_trie(tagged, om.onto1, in_file.stem.split('_')[0])
+    trie = tagged_to_trie(tagged, om.onto1, in_file.stem.split("_")[0])
     onto = LeavedOnto(trie, out_file)
     onto.convert2yaml()
 
@@ -48,12 +48,12 @@ def tagged_to_trie(tagged, onto_basis, origin):
                 for e in entries:
                     found_level = onto_basis.get_field_value(e, "level")
                     if found_level == level:
-                        onto_basis.set_field_value(e, 'origin', origin)
+                        onto_basis.set_field_value(e, "origin", origin)
                         trie.add(path, e)
         else:
             path = [pos, "to_organize"]
             parts = {"word": word, "POS": pos, "level": level}
             entry = [parts[l] if l in parts else "" for l in onto_basis.ont.legend]
-            onto_basis.set_field_value(entry, 'origin', origin)
+            onto_basis.set_field_value(entry, "origin", origin)
             trie.add(path, entry)
     return trie

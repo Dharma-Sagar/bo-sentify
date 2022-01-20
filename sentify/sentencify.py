@@ -60,7 +60,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
                 tok = T.set_tok()
 
             in_file = steps[cur - 1]
-            out_file = path_ids[cur][0] / (in_file.stem + "_segmented.txt")
+            out_file = path_ids[cur - 1][0] / (in_file.stem + "_segmented.txt")
             T.tok_file(tok, in_file, out_file)
             new_files.append(in_file)
             new_files.append(out_file)
@@ -158,13 +158,17 @@ def current_state(paths_ids):
         for f in path.glob("*"):
             if f.suffix != file_type[path.stem]:
                 continue
+            # add file to state
             stem = f.stem.split("_")[0]
             if stem not in state:
                 state[stem] = {i: None for i in range(2, len(paths_ids) + 1)}
             step = int(f.parts[1][0])
             state[stem][step] = f
 
-    resources = {f.stem: f for f in paths_ids[3][0].glob("*.yaml")}
+            # add onto files to resources
+            if path.stem.startswith("4"):
+                resources[f.stem] = f
+
     return state, resources
 
 
