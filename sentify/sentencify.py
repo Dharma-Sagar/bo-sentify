@@ -54,6 +54,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
             in_file = steps[cur - 1]
             out_file = path_ids[cur][0] / (in_file.stem + "_segmented.txt")
             T.tok_file(tok, in_file, out_file)
+            new_files.append(in_file)
             new_files.append(out_file)
 
             # 2. manually correct the segmentation
