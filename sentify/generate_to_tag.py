@@ -27,7 +27,7 @@ def rows_from_lines(lines):
     return rows
 
 
-def generate_to_tag(in_file, out_file, resources, l_colors=None):
+def generate_to_tag(in_file, out_file, resources, basis_onto=None):
     font = "Jomolhari"
     ft_words = Font(font, size=17, color="000c1d91")
     ft_pos = Font(font, size=13, color="004e4f54")
@@ -43,11 +43,8 @@ def generate_to_tag(in_file, out_file, resources, l_colors=None):
     rows = rows_from_lines(lines)
 
     # load available ontos
-    main_onto = resources["general_onto"]
-    other_ontos = [r for r in resources.values() if r.stem != "general_onto"]
-
-    om = OntoManager(main_onto)
-    om.batch_merge_to_onto(other_ontos)
+    om = OntoManager(basis_onto)
+    om.batch_merge_to_onto(resources.values())
     onto = om.onto1
 
     # prepare data validation for POS and levels

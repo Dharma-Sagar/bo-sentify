@@ -8,7 +8,7 @@ from .onto_from_tagged import onto_from_tagged
 from .drive import download_drive
 
 
-def sentencify(content_path, drive_ids, lang, mode="local", subs=None, l_colors=None):
+def sentencify(content_path, drive_ids, lang, mode="local", subs=None, l_colors=None, basis_onto=None):
     if not subs:
         subs = [
             "1 to_segment",
@@ -24,15 +24,15 @@ def sentencify(content_path, drive_ids, lang, mode="local", subs=None, l_colors=
     prepare_folders(content_path, subs)  # prepare the folder structure
 
     if mode == "local":
-        sentencify_local(path_ids, lang=lang, l_colors=l_colors)
+        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto)
     elif mode == "drive":
         download_drive(path_ids)
-        sentencify_local(path_ids, lang=lang, l_colors=l_colors)
+        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto)
     else:
         raise ValueError('either "local" or "drive"')
 
 
-def sentencify_local(path_ids, lang="bo", l_colors=None):
+def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
     state, resources = current_state(path_ids)
     new_files = []
     T = Tokenizer(lang=lang)
@@ -40,9 +40,8 @@ def sentencify_local(path_ids, lang="bo", l_colors=None):
 
     for file, steps in state.items():
         print(file)
-        cur = (
-            2
-        )  # starting at step 2: segmented text. (segmentation should be done with corpus_segment.py
+        cur = 2
+        # starting at step 2: segmented text. (segmentation should be done with corpus_segment.py
         while cur <= 7 and steps[cur]:
             cur += 1
 
@@ -65,9 +64,9 @@ def sentencify_local(path_ids, lang="bo", l_colors=None):
             print("\ncreating the file to tag...")
             # TODO: merge the base onto and all the ones from individual files, only add data validation to new words.
             in_file = steps[cur - 1]
-            out_file = path_ids[cur][0] / (in_file.stem.split("_")[0] + "_totag.xlsx")
+            out_file = path_ids[cur-1][0] / (in_file.stem.split("_")[0] + "_totag.xlsx")
             if not out_file.is_file():
-                generate_to_tag(in_file, out_file, resources, l_colors=l_colors)
+                generate_to_tag(in_file, out_file, resources, basis_onto=basis_onto)
                 new_files.append(out_file)
 
             # 4. manually POS tag the segmented text
@@ -83,7 +82,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None):
                 in_file.stem.split("_")[0] + "_onto.yaml"
             )
             if not out_file.is_file():
-                onto_from_tagged(in_file, out_file, resources)
+                onto_from_tagged(in_file, out_file, resources, basis_onto=basis_onto)
                 new_files.append(out_file)
 
             # 6. manually fill in the onto
@@ -96,7 +95,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None):
             print("\tcreating file to simplify...")
             in_file = steps[cur - 3]
             out_file = path_ids[cur - 1][0] / (in_file.stem.split("_")[0] + ".xlsx")
-            generate_to_simplify(in_file, out_file, resources, l_colors)
+            generate_to_simplify(in_file, out_file, resources, l_colors, basis_onto=basis_onto)
             new_files.append(out_file)
 
             # 8. manually process the .xlsx files in to_simplify
@@ -135,7 +134,7 @@ def current_state(paths_ids):
     # starting from segmented
     for path, _ in paths_ids[1:]:
         for f in path.glob("*"):
-            if f.suffix not in [".txt", ".xlsx", ".yaml"]:
+            if f.suffix not in [".txt", ".xlsx", ".yaml", '.docx']:
                 continue
             stem = f.stem.split("_")[0]
             if stem not in state:

@@ -22,3 +22,5 @@ level_colors:
   A2: '00003366'
   A2+: '00339966'
   B1: '00003300'
+# general onto that is used as the basis for creating new ones
+basis_onto: 'content/0 resources/general_onto.yaml'

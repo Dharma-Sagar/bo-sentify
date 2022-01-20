@@ -6,7 +6,7 @@ from .dataval import DataVal
 from .utils import resize_sheet
 
 
-def generate_to_simplify(in_file, out_file, resources, l_colors):
+def generate_to_simplify(in_file, out_file, resources, l_colors, basis_onto=None):
     how_many_copied_lines = 12
     font = "Jomolhari"
     ft_sent = Font(font, size=12)
@@ -29,11 +29,8 @@ def generate_to_simplify(in_file, out_file, resources, l_colors):
         resize_sheet(ws)
 
     # load ontos
-    main_onto = resources["general_onto"]
-    other_ontos = [r for r in resources.values() if r.stem != "general_onto"]
-
-    om = OntoManager(main_onto)
-    om.batch_merge_to_onto(other_ontos)
+    om = OntoManager(basis_onto)
+    om.batch_merge_to_onto(resources.values())
     onto = om.onto1
 
     # add data validation for synonyms and color cells according to levels

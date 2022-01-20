@@ -4,19 +4,16 @@ from openpyxl.utils import coordinate_to_tuple
 from .onto.leavedonto import OntoManager, OntTrie, LeavedOnto
 
 
-def onto_from_tagged(in_file, out_file, resources):
+def onto_from_tagged(in_file, out_file, resources, basis_onto=None):
     # load words and tags
     tagged = get_entries(in_file)
 
-    # load all ontos
-    main_onto = resources["general_onto"]
-    other_ontos = [r for r in resources.values() if r.stem != "general_onto"]
-
-    om = OntoManager(main_onto)
-    om.batch_merge_to_onto(other_ontos)
+    # load all available ontos
+    om = OntoManager(basis_onto)
+    om.batch_merge_to_onto(resources.values())
 
     # populate new onto:
-    trie = tagged_to_trie(tagged, om.onto1)
+    trie = tagged_to_trie(tagged, om.onto1, in_file.stem.split('_')[0])
     onto = LeavedOnto(trie, out_file)
     onto.convert2yaml()
 
@@ -41,7 +38,7 @@ def get_entries(in_file):
     return tagged
 
 
-def tagged_to_trie(tagged, onto_basis):
+def tagged_to_trie(tagged, onto_basis, origin):
     trie = OntTrie()
     trie.legend = onto_basis.ont.legend
     for word, pos, level in tagged:
@@ -51,10 +48,12 @@ def tagged_to_trie(tagged, onto_basis):
                 for e in entries:
                     found_level = onto_basis.get_field_value(e, "level")
                     if found_level == level:
+                        onto_basis.set_field_value(e, 'origin', origin)
                         trie.add(path, e)
         else:
             path = [pos, "to_organize"]
             parts = {"word": word, "POS": pos, "level": level}
             entry = [parts[l] if l in parts else "" for l in onto_basis.ont.legend]
+            onto_basis.set_field_value(entry, 'origin', origin)
             trie.add(path, entry)
     return trie
