@@ -105,7 +105,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
         elif cur == 5:
             print("\tcreating file to simplify...")
             in_file = steps[cur - 3]
-            out_file = path_ids[cur - 1][0] / (in_file.stem.split("_")[0] + ".xlsx")
+            out_file = path_ids[cur - 1][0] / (in_file.stem.split("_")[0] + "_simplify.xlsx")
             generate_to_simplify(
                 in_file, out_file, resources, l_colors, basis_onto=basis_onto
             )
