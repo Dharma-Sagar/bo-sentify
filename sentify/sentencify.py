@@ -5,7 +5,7 @@ from .corpus_segment import Tokenizer
 from .generate_to_simplify import generate_to_simplify
 from .generate_to_tag import generate_to_tag
 from .onto_from_tagged import onto_from_tagged
-from .drive import download_drive
+from .google_drive import download_drive, upload_to_drive
 
 
 def sentencify(
@@ -29,15 +29,24 @@ def sentencify(
         ]
 
     path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(len(drive_ids))]
-    prepare_folders(content_path, subs)  # prepare the folder structure
+    abort = prepare_folders(content_path, subs)  # prepare the folder structure
+    if abort and mode == "local":
+        print(
+            'Exiting: "content" folder did not exist. Please add some files to segment and rerun.'
+        )
+        return
 
     if mode == "local":
         sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto)
     elif mode == "drive":
-        download_drive(path_ids)
         sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto)
+        upload_to_drive(drive_ids)
+    elif mode == "download":
+        download_drive(path_ids)
+    elif mode == "upload":
+        upload_to_drive(drive_ids)
     else:
-        raise ValueError('either "local" or "drive"')
+        raise ValueError('either one of "local", "drive", "download" and "upload".')
 
 
 def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
@@ -105,7 +114,9 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
         elif cur == 5:
             print("\tcreating file to simplify...")
             in_file = steps[cur - 3]
-            out_file = path_ids[cur - 1][0] / (in_file.stem.split("_")[0] + "_simplify.xlsx")
+            out_file = path_ids[cur - 1][0] / (
+                in_file.stem.split("_")[0] + "_simplify.xlsx"
+            )
             generate_to_simplify(
                 in_file, out_file, resources, l_colors, basis_onto=basis_onto
             )
@@ -187,8 +198,13 @@ def write_to_upload(files):
 
 
 def prepare_folders(content_path, sub_folders):
+    missing = False
     if not content_path.is_dir():
+        missing = True
+        print(f'folder "{content_path}" does not exist. Creating it...')
         content_path.mkdir()
     for sub in sub_folders:
         if not (content_path / sub).is_dir():
+            print(f'folder "{(content_path / sub)}" does not exist. Creating it...')
             (content_path / sub).mkdir()
+    return missing

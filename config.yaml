@@ -1,6 +1,6 @@
-# "local", "drive" or "upload"
-mode: local
-# "bo" and "en" are currently supported
+# "local", "drive", "upload" or "download"
+mode: drive
+# "bo", "en" and "pt" are currently supported
 lang: bo
 # the relative path to the folder containing the 7 folders of the data
 input: content
@@ -23,4 +23,4 @@ level_colors:
   A2+: '00339966'
   B1: '00003300'
 # general onto that is used as the basis for creating new ones
-basis_onto: 'content/0 resources/general_onto.yaml'
+basis_onto: 'content/0 resources/master_onto.yaml'

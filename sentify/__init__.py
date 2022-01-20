@@ -2,32 +2,19 @@ import yaml
 from pathlib import Path
 
 from .sentencify import sentencify
-from .drive import upload_to_drive
 
 
 def sentify():
     mode, lang, content, driver_folders, level_colors, basis_onto = read_config()
     content = Path(content)
-    if mode == "local":
-        sentencify(
+    sentencify(
             content,
             driver_folders,
             lang,
             mode=mode,
             l_colors=level_colors,
             basis_onto=basis_onto,
-        )
-    elif mode == "drive":
-        sentencify(
-            content,
-            driver_folders,
-            lang,
-            mode=mode,
-            l_colors=level_colors,
-            basis_onto=basis_onto,
-        )
-    elif mode == "upload":
-        upload_to_drive(driver_folders)
+    )
 
 
 def read_config():
