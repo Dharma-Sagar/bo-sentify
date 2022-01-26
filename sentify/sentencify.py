@@ -61,7 +61,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None, pos=No
         print(file)
         cur = 1
         # starting at step 2: segmented text. (segmentation should be done with corpus_segment.py
-        while cur <= 7 and steps[cur]:
+        while cur <= 7 and cur in steps:
             cur += 1
 
         # 1. tokenize .txt files in to_segment, tokenized are in segmented as _segmented.txt files
