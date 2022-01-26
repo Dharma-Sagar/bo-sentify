@@ -27,7 +27,7 @@ def rows_from_lines(lines):
     return rows
 
 
-def generate_to_tag(in_file, out_file, resources, basis_onto=None):
+def generate_to_tag(in_file, out_file, resources, pos_list, levels, basis_onto=None,):
     font = "Jomolhari"
     ft_words = Font(font, size=17, color="000c1d91")
     ft_pos = Font(font, size=13, color="004e4f54")
@@ -49,18 +49,7 @@ def generate_to_tag(in_file, out_file, resources, basis_onto=None):
 
     # prepare data validation for POS and levels
     dv = DataVal(wb)
-    pos = [
-        "ཚིག་ཕྲད།",
-        "མིང་ཚིག",
-        "བྱ་ཚིག",
-        "རྒྱན་ཚིག",
-        "བསྣན་ཚིག",
-        "ཚབ་ཚིག",
-        "ཚེག་ཤད།",
-        "ཁྱད་ཚིག",
-    ]
-    dv.add_validator("POS", pos)
-    levels = ["A0", "A1", "A2", "A2+", "B1", "B1+", "B2", "B2+", "C1", "C1+"]
+    dv.add_validator("POS", pos_list)
     dv.add_validator("level", levels)
 
     # create sheet and fill it

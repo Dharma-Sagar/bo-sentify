@@ -16,6 +16,8 @@ def sentencify(
     subs=None,
     l_colors=None,
     basis_onto=None,
+    pos=None,
+    levels=None,
 ):
     if not subs:
         subs = [
@@ -37,9 +39,9 @@ def sentencify(
         return
 
     if mode == "local":
-        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto)
+        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto, pos=pos, levels=levels)
     elif mode == "drive":
-        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto)
+        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto, pos=pos, levels=levels)
         upload_to_drive(drive_ids)
     elif mode == "download":
         download_drive(path_ids)
@@ -49,7 +51,7 @@ def sentencify(
         raise ValueError('either one of "local", "drive", "download" and "upload".')
 
 
-def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
+def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None, pos=None, levels=None):
     state, resources = current_state(path_ids)
     new_files = []
     T = Tokenizer(lang=lang)
@@ -86,7 +88,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
                 in_file.stem.split("_")[0] + "_totag.xlsx"
             )
             if not out_file.is_file():
-                generate_to_tag(in_file, out_file, resources, basis_onto=basis_onto)
+                generate_to_tag(in_file, out_file, resources, pos, levels, basis_onto=basis_onto)
                 new_files.append(out_file)
 
             # 4. manually POS tag the segmented text
