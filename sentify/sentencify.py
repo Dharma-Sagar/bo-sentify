@@ -72,7 +72,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
         elif cur == 2:
             print("\tgenerating the alternative sentences...")
             in_file = steps[cur - 1]
-            out_file = path_ids[cur - 1][0] / (
+            out_file = path_ids[cur][0] / (
                 in_file.stem.split("_")[0] + "_sents.xlsx"
             )
             generate_alternative_sentences(
@@ -84,7 +84,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
         elif cur == 3:
             print("\tgenerating simplified versions")
             in_file = steps[cur - 1]
-            out_file = path_ids[cur - 1][0] / (
+            out_file = path_ids[cur][0] / (
                 in_file.stem.split("_")[0] + "_versions.docx"
             )
             generate_versions(in_file, out_file, lang, format=True)
