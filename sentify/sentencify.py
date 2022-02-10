@@ -1,10 +1,7 @@
 from pathlib import Path
 
 from .sentence_versions import generate_alternative_sentences, generate_versions
-from .corpus_segment import Tokenizer
 from .generate_to_simplify import generate_to_simplify
-from .generate_to_tag import generate_to_tag
-from .onto_from_tagged import onto_from_tagged
 from .google_drive import download_drive, upload_to_drive
 
 
@@ -15,19 +12,13 @@ def sentencify(
     mode="local",
     subs=None,
     l_colors=None,
-    basis_onto=None,
-    pos=None,
-    levels=None,
 ):
     if not subs:
         subs = [
-            "1 to_segment",
-            "2 segmented",
-            "3 to_tag",
-            "4 vocabulary",
-            "5 to_simplify",
-            "6 simplified",
-            "7 versions",
+            "0 resources",
+            "1 to_simplify",
+            "2 simplified",
+            "3 versions",
         ]
 
     path_ids = [(content_path / subs[i], drive_ids[i]) for i in range(len(drive_ids))]
@@ -39,9 +30,9 @@ def sentencify(
         return
 
     if mode == "local":
-        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto, pos=pos, levels=levels)
+        sentencify_local(path_ids, lang=lang, l_colors=l_colors)
     elif mode == "drive":
-        sentencify_local(path_ids, lang=lang, l_colors=l_colors, basis_onto=basis_onto, pos=pos, levels=levels)
+        sentencify_local(path_ids, lang=lang, l_colors=l_colors)
         upload_to_drive(drive_ids)
     elif mode == "download":
         download_drive(path_ids)
@@ -51,72 +42,22 @@ def sentencify(
         raise ValueError('either one of "local", "drive", "download" and "upload".')
 
 
-def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None, pos=None, levels=None):
+def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None):
     state, resources = current_state(path_ids)
     new_files = []
-    T = Tokenizer(lang=lang)
-    tok = None
 
     for file, steps in state.items():
         print(file)
-        cur = 1
+        cur = 0
         # starting at step 2: segmented text. (segmentation should be done with corpus_segment.py
-        while cur <= 7 and cur in steps and steps[cur]:
+        while cur <= 3 and cur in steps and steps[cur]:
             cur += 1
 
-        # 1. tokenize .txt files in to_segment, tokenized are in segmented as _segmented.txt files
-        if cur == 2:
-            print("\tsegmenting...")
-            if not tok:
-                tok = T.set_tok()
-
-            in_file = steps[cur - 1]
-            out_file = path_ids[cur - 1][0] / (in_file.stem + "_segmented.txt")
-            T.tok_file(tok, in_file, out_file)
-            new_files.append(in_file)
-            new_files.append(out_file)
-
-            # 2. manually correct the segmentation
-            print("\t--> Please manually correct the segmentation.")
-
-        # 3. create the _totag.xlsx in to_tag from the segmented .txt file from segmented
-        elif cur == 3:
-            print("\ncreating the file to tag...")
-            # TODO: merge the base onto and all the ones from individual files, only add data validation to new words.
-            in_file = steps[cur - 1]
-            out_file = path_ids[cur - 1][0] / (
-                in_file.stem.split("_")[0] + "_totag.xlsx"
-            )
-            if not out_file.is_file():
-                generate_to_tag(in_file, out_file, resources, pos, levels, basis_onto=basis_onto)
-                new_files.append(out_file)
-
-            # 4. manually POS tag the segmented text
-            print(
-                "\t--> Please manually tag new words with their POS tag and level. (words not tagged will be ignored)"
-            )
-
-        # 5. create .yaml ontology files from tagged .xlsx files from to_tag
-        elif cur == 4:
-            print("\t creating the onto from the tagged file...")
-            in_file = steps[cur - 1]
-            out_file = path_ids[cur - 1][0] / (
-                in_file.stem.split("_")[0] + "_onto.yaml"
-            )
-            if not out_file.is_file():
-                onto_from_tagged(in_file, out_file, resources, basis_onto=basis_onto)
-                new_files.append(out_file)
-
-            # 6. manually fill in the onto
-            print(
-                '\t--> Please integrate new words in the onto from "to_organize" sections and add synonyms.'
-            )
-
-        # 7. create .xlsx files in to_simplify from segmented .txt files from segmented
-        elif cur == 5:
+        # 3. create .xlsx files in to_simplify from segmented .txt files from segmented
+        if cur == 1:
             print("\tcreating file to simplify...")
-            in_file = steps[cur - 3]
-            out_file = path_ids[cur - 1][0] / (
+            in_file = steps[cur - 1]
+            out_file = path_ids[cur][0] / (
                 in_file.stem.split("_")[0] + "_simplify.xlsx"
             )
             generate_to_simplify(
@@ -128,7 +69,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None, pos=No
             print("\t--> Please manually simplify the sentences.")
 
         # 9. generate alternative sentences as _sents.xlsx files in simplified from .xlsx files in to_simplify
-        elif cur == 6:
+        elif cur == 2:
             print("\tgenerating the alternative sentences...")
             in_file = steps[cur - 1]
             out_file = path_ids[cur - 1][0] / (
@@ -140,7 +81,7 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None, pos=No
             new_files.append(out_file)
 
         # 10. Generate versions as _versions.docx in versions from .xlsx files in _simplified
-        elif cur == 7:
+        elif cur == 3:
             print("\tgenerating simplified versions")
             in_file = steps[cur - 1]
             out_file = path_ids[cur - 1][0] / (
@@ -157,17 +98,19 @@ def sentencify_local(path_ids, lang="bo", l_colors=None, basis_onto=None, pos=No
 
 def current_state(paths_ids):
     file_type = {
-        "1 to_segment": ".txt",
-        "2 segmented": ".txt",
-        "3 to_tag": ".xlsx",
-        "4 vocabulary": ".yaml",
-        "5 to_simplify": ".xlsx",
-        "6 simplified": ".xlsx",
-        "7 versions": ".docx",
+        "1 to_simplify": ".xlsx",
+        "2 simplified": ".xlsx",
+        "3 versions": ".docx",
     }
-    state = {}
-    resources = {}
-    for path, _ in paths_ids:
+
+    resources = {p.stem.split('_')[0]: p for p in paths_ids[0][0].glob('*.yaml')}
+    initial = {p.stem.split('_')[0]: p for p in paths_ids[0][0].glob('*.xlsx')}
+    intersect = resources.keys() & initial.keys()
+    state = {e: {i: None for i in range(0, len(paths_ids) + 1)} for e in intersect}
+    for stem, file_ in initial.items():
+        state[stem][0] = file_
+
+    for path, _ in paths_ids[1:]:
         for f in path.glob("*"):
             if f.suffix != file_type[path.stem]:
                 continue
@@ -177,10 +120,6 @@ def current_state(paths_ids):
                 state[stem] = {i: None for i in range(2, len(paths_ids) + 1)}
             step = int(f.parts[1][0])
             state[stem][step] = f
-
-            # add onto files to resources
-            if path.stem.startswith("4"):
-                resources[f.stem] = f
 
     return state, resources
 

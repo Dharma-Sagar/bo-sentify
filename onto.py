@@ -1,5 +1,5 @@
-from sentify.onto.leavedonto import LeavedOnto
+from pathlib import Path
+from sentify.onto.leavedonto import LeavedOnto, OntoManager, merge_ontos, export
 
-in_file = "content/0 resources/master_onto.yaml"
-lo = LeavedOnto(in_file)
-lo.convert2xlsx()
+om = OntoManager(Path('content/0 resources/master_onto.yaml'))
+om.adjust_legends()

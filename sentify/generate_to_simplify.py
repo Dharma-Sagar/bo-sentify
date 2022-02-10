@@ -1,4 +1,4 @@
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
 from .onto.leavedonto import OntoManager
@@ -7,7 +7,7 @@ from .utils import resize_sheet
 
 
 def generate_to_simplify(in_file, out_file, resources, l_colors, basis_onto=None):
-    how_many_copied_lines = 12
+    how_many_copied_lines = 10
     font = "Jomolhari"
     ft_sent = Font(font, size=12)
     alignmnt = Alignment(horizontal="left", vertical="center")
@@ -16,57 +16,80 @@ def generate_to_simplify(in_file, out_file, resources, l_colors, basis_onto=None
     wb.remove(wb.get_sheet_by_name("Sheet"))
 
     # add sentences to sheets
-    lines = in_file.read_text().lstrip("\ufeff").split("\n")
-    for s, sent in enumerate(lines):
-        ws = wb.create_sheet(title=str(s))
-        words = sent.split(" ")
-        for i in range(2, how_many_copied_lines):
-            for n, w in enumerate(words):
-                cell = ws.cell(row=i, column=n + 1)
-                cell.value = w
-                cell.font = ft_sent
-                cell.alignment = alignmnt
-        resize_sheet(ws)
+    # extract triples from _totag.xlsx: sentence, pos and levels
+    sentences = extract_tagged(in_file)  # in_file.read_text().lstrip("\ufeff").split("\n")
 
-    # load ontos
+    # prepare the synonyms
     om = OntoManager(basis_onto)
-    om.batch_merge_to_onto(resources.values())
+    om.batch_merge_to_onto(list(resources.values()))
     onto = om.onto1
 
-    # add data validation for synonyms and color cells according to levels
+    # prepare synonym data validation
     dv = DataVal(wb)
+
     val_num = 0
-    for name in wb.sheetnames:
-        sheet = wb[name]
-        row = 2
-        for col in range(1, sheet.max_column + 1):
-            cell = sheet.cell(row, col)
-            word = cell.value
+    for n, sentence in enumerate(sentences):
+        sheet_name = str(n)
+        ws = wb.create_sheet(title=sheet_name)
+        for i in range(2, how_many_copied_lines + 2):
+            for m, parts in enumerate(sentence):
+                cell = ws.cell(row=i, column=m + 1)
+                word, pos, level = parts
+                cell.value = word
+                cell.font = ft_sent
+                cell.alignment = alignmnt
 
-            # get all entries corresponding to word
-            found = onto.find_word(word)
+                # only adding synonyms and level color code to first row
+                if i > 2:
+                    continue
 
-            # ## SYNONYMS ## #
-            # extract all synonyms
-            syns = [word]
-            for path, entries in found:
-                for e in entries:
-                    syns.append(onto.get_field_value(e, "lemma"))
-                    s = onto.get_field_value(e, "synonyms")
-                    syns.extend([a for a in s.split(" ") if a])
-            syns = list(set(syns))
-
-            # pass if no synonyms
-            if (len(syns) == 1 and syns[0] != word) or len(syns) > 1:
-                # add synonyms as data validation to cell
-                val_name = f"{val_num} {word}"
-                dv.add_validator(val_name, syns)
-                dv.add_val_to_cell(val_name, name, row=row, col=col)
-                val_num += 1
-
-            # TODO: decide not only based on first element of list, but use combination of POS + word to find entries
-            if found:
-                level = onto.get_field_value(found[0][1][0], "level")
                 cell.fill = PatternFill("solid", fgColor=l_colors[level])
 
+                # ## SYNONYMS ## #
+                # extract all synonyms
+                found = onto.find_word(word)
+                syns = [word]
+                for path, entries in found:
+                    for e in entries:
+                        lemma = onto.get_field_value(e, "lemma")
+                        if lemma:
+                            syns.append(lemma)
+                        syn = onto.get_field_value(e, "synonyms")
+                        if syn:
+                            syns.extend([a for a in syn.split(" ") if a])
+                syns = list(set(syns))
+
+                # pass if no synonyms
+                if (len(syns) == 1 and syns[0] != word) or len(syns) > 1:
+                    # add synonyms as data validation to cell
+                    val_name = f"{val_num} {word}"
+                    dv.add_validator(val_name, syns)
+                    dv.add_val_to_cell(val_name, sheet_name, idx=cell.coordinate)
+                    val_num += 1
+
+        resize_sheet(ws)
+
     wb.save(out_file)
+
+
+def extract_tagged(in_file):
+    lines_per_sentence = 4
+
+    wb = load_workbook(in_file)
+    dump = list(wb.active.values)
+    sentences = []
+    for i in range(0, len(dump), lines_per_sentence):
+        words = list(dump[i])
+        pos = list(dump[i+1])
+        levels = list(dump[i+2])
+        sent = []
+        i = 0
+        while i < len(words):
+            if words[i] and pos[i] and levels[i]:
+                sent.append((words[i], pos[i], levels[i]))
+            else:
+                break
+            i += 1
+        sentences.append(sent)
+
+    return sentences

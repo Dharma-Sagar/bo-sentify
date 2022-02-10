@@ -5,7 +5,7 @@ from .sentencify import sentencify
 
 
 def sentify():
-    mode, lang, content, driver_folders, level_colors, basis_onto, pos, levels = read_config()
+    mode, lang, content, driver_folders, level_colors = read_config()
     content = Path(content)
     sentencify(
             content,
@@ -13,9 +13,6 @@ def sentify():
             lang,
             mode=mode,
             l_colors=level_colors,
-            basis_onto=basis_onto,
-            pos=pos,
-            levels=levels,
     )
 
 
@@ -47,9 +44,6 @@ drive_folders:
         struct["input"],
         struct["drive_folders"],
         struct["level_colors"],
-        struct["basis_onto"],
-        struct["pos"],
-        struct["levels"]
     )
 
 
